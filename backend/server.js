@@ -209,7 +209,18 @@ app.get('/api/leads', requireAuth, async (req, res) => {
       query.location = location;
     }
     if (jobId) {
-      query.jobId = jobId;
+      const job = await ScrapeJob.findById(jobId);
+      if (job) {
+        query.$or = [
+          { jobId: jobId },
+          { 
+            location: job.location, 
+            ...(job.category !== 'All' ? { category: job.category } : {})
+          }
+        ];
+      } else {
+        query.jobId = jobId;
+      }
     }
     if (search) {
       query.$or = [
