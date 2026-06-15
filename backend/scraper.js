@@ -240,6 +240,7 @@ export async function runScraper(jobId) {
                 address: details.address || '',
                 mapsUrl: listing.url,
                 location: job.location,
+                jobId: job._id,
                 status: 'New'
               });
               leadsCount++;

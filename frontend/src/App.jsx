@@ -47,7 +47,7 @@ function App() {
   // Dashboard States
   const [leads, setLeads] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState('All');
   const [location, setLocation] = useState('');
   const [isScraping, setIsScraping] = useState(false);
   const [scrapingError, setScrapingError] = useState('');
@@ -58,7 +58,7 @@ function App() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterLocation, setFilterLocation] = useState('');
+  const [filterJobId, setFilterJobId] = useState('');
 
   // Auto-complete location suggestions
   const [suggestions, setSuggestions] = useState([]);
@@ -185,7 +185,7 @@ function App() {
   useEffect(() => {
     if (token) {
       fetchLeads();
-      fetchJobs();
+      fetchJobs(true); // Auto-select latest job on first load
       
       const interval = setInterval(() => {
         fetchJobs();
@@ -194,7 +194,7 @@ function App() {
 
       return () => clearInterval(interval);
     }
-  }, [token, filterCategory, filterStatus, searchTerm, filterLocation]);
+  }, [token, filterCategory, filterStatus, searchTerm, filterJobId]);
 
   const fetchLeads = async () => {
     try {
@@ -202,7 +202,7 @@ function App() {
       if (filterCategory) params.append('category', filterCategory);
       if (filterStatus) params.append('status', filterStatus);
       if (searchTerm) params.append('search', searchTerm);
-      if (filterLocation) params.append('location', filterLocation);
+      if (filterJobId) params.append('jobId', filterJobId);
       
       const response = await fetch(`${BACKEND_URL}/api/leads?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -216,7 +216,7 @@ function App() {
     }
   };
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (autoSelectLatest = false) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/status`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -226,6 +226,10 @@ function App() {
         setJobs(data);
         const running = data.some(j => j.status === 'Running' || j.status === 'Pending');
         setIsScraping(running);
+
+        if (autoSelectLatest && data.length > 0) {
+          setFilterJobId(prev => prev || data[0]._id);
+        }
       }
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -287,15 +291,19 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ category: 'All', location }),
+        body: JSON.stringify({ category, location }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to start scraper');
+        throw new Error(data.error || 'Failed to start scraper');
       }
       
       setLocation('');
+      if (data.job && data.job._id) {
+        setFilterJobId(data.job._id);
+        setLeads([]); // Empty the leads list for the new scraper run
+      }
       fetchJobs();
     } catch (error) {
       setScrapingError(error.message);
@@ -656,6 +664,20 @@ Sumit Ladwan
                 )}
               </div>
 
+              <div className="form-group">
+                <label>Category</label>
+                <select 
+                  value={category} 
+                  onChange={(e) => setCategory(e.target.value)}
+                  disabled={isScraping}
+                >
+                  <option value="All">All Categories</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
               {scrapingError && (
                 <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginBottom: '1rem' }}>
                   {scrapingError}
@@ -670,7 +692,7 @@ Sumit Ladwan
                     disabled={true}
                     style={{ flex: 1 }}
                   >
-                    <RefreshCw size={16} className="animate-spin" /> Scraping All Categories...
+                    <RefreshCw size={16} className="animate-spin" /> Scraping {category === 'All' ? 'All Categories' : category}...
                   </button>
                   <button 
                     type="button" 
@@ -763,13 +785,13 @@ Sumit Ladwan
                   <div 
                     key={job._id} 
                     className="status-item"
-                    onClick={() => setFilterLocation(job.location)}
+                    onClick={() => setFilterJobId(job._id)}
                     style={{ 
                       cursor: 'pointer', 
-                      border: filterLocation === job.location ? '1px solid var(--primary-color)' : '1px solid transparent',
-                      backgroundColor: filterLocation === job.location ? 'rgba(37, 99, 235, 0.05)' : ''
+                      border: filterJobId === job._id ? '1px solid var(--primary-color)' : '1px solid transparent',
+                      backgroundColor: filterJobId === job._id ? 'rgba(37, 99, 235, 0.05)' : ''
                     }}
-                    title="Click to filter leads by this location"
+                    title="Click to filter leads by this job"
                   >
                     <div className="status-item-info">
                       <strong style={{ fontSize: '0.825rem' }}>{job.category}</strong>
@@ -808,26 +830,29 @@ Sumit Ladwan
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <h2>Target Leads ({leads.length})</h2>
-                {filterLocation && (
-                  <span 
-                    onClick={() => setFilterLocation('')}
-                    style={{ 
-                      fontSize: '0.725rem', 
-                      backgroundColor: 'rgba(37, 99, 235, 0.1)', 
-                      color: 'var(--primary-color)', 
-                      padding: '0.25rem 0.5rem', 
-                      borderRadius: '12px', 
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      fontWeight: '500'
-                    }}
-                    title="Click to clear location filter"
-                  >
-                    📍 {filterLocation} <span style={{ fontWeight: 'bold', marginLeft: '2px' }}>×</span>
-                  </span>
-                )}
+                {(() => {
+                  const selectedJob = jobs.find(j => j._id === filterJobId);
+                  return selectedJob && (
+                    <span 
+                      onClick={() => setFilterJobId('')}
+                      style={{ 
+                        fontSize: '0.725rem', 
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)', 
+                        color: 'var(--primary-color)', 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '12px', 
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontWeight: '500'
+                      }}
+                      title="Click to clear job filter"
+                    >
+                      📍 {selectedJob.location} ({selectedJob.category}) <span style={{ fontWeight: 'bold', marginLeft: '2px' }}>×</span>
+                    </span>
+                  );
+                })()}
               </div>
               <button 
                 className="btn btn-secondary" 

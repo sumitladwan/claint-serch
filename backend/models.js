@@ -7,6 +7,7 @@ const LeadSchema = new mongoose.Schema({
   address: { type: String, default: '' },
   mapsUrl: { type: String, default: '' },
   location: { type: String, required: true },
+  jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScrapeJob' },
   status: { 
     type: String, 
     enum: ['New', 'Contacted', 'Interested', 'Not Interested', 'Done'], 
@@ -16,8 +17,8 @@ const LeadSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// Avoid saving duplicates by creating a compound index on name and phone
-LeadSchema.index({ name: 1, phone: 1 }, { unique: true });
+// Avoid saving duplicates by creating a compound index on name, phone and jobId
+LeadSchema.index({ name: 1, phone: 1, jobId: 1 }, { unique: true });
 
 const ScrapeJobSchema = new mongoose.Schema({
   category: { type: String, default: 'All' },
