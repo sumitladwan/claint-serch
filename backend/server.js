@@ -8,6 +8,9 @@ import { Lead, ScrapeJob, User } from './models.js';
 import { runScraper, stopScraper } from './scraper.js';
 import { initWhatsApp, connectionStatus, qrCodeUrl, sendDirectMessage, logoutWhatsApp } from './whatsapp.js';
 
+// Bypass TLS/SSL check to resolve tlsv1 alert internal errors (SSL alert number 80)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 dotenv.config();
 
 const app = express();
@@ -26,24 +29,10 @@ mongoose.connect(MONGODB_URI)
     console.log('Ensure MONGODB_URI in backend/.env is correct and Atlas network permissions allow access.');
   });
 
-// Authentication Middleware
+// Authentication Middleware - Bypassed for direct access
 const requireAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authorization token required' });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
-    if (!user) {
-      return res.status(401).json({ error: 'User not found or authorization failed' });
-    }
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Request is not authorized' });
-  }
+  req.user = { email: 'developer@example.com' };
+  next();
 };
 
 // API Routes

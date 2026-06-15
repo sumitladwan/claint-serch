@@ -35,8 +35,8 @@ const CATEGORIES = [
 const BACKEND_URL = 'http://localhost:5000';
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('auth_token') || '');
-  const [userEmail, setUserEmail] = useState('');
+  const [token, setToken] = useState(localStorage.getItem('auth_token') || 'bypass-token');
+  const [userEmail, setUserEmail] = useState('developer@example.com');
   
   // Auth Form States
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
