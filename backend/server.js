@@ -196,7 +196,7 @@ app.get('/api/status', requireAuth, async (req, res) => {
 // 4. Get Leads (Protected)
 app.get('/api/leads', requireAuth, async (req, res) => {
   try {
-    const { category, status, search } = req.query;
+    const { category, status, search, location } = req.query;
     const query = {};
 
     if (category) {
@@ -204,6 +204,9 @@ app.get('/api/leads', requireAuth, async (req, res) => {
     }
     if (status) {
       query.status = status;
+    }
+    if (location) {
+      query.location = location;
     }
     if (search) {
       query.$or = [

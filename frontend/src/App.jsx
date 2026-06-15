@@ -58,6 +58,7 @@ function App() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
 
   // Auto-complete location suggestions
   const [suggestions, setSuggestions] = useState([]);
@@ -193,7 +194,7 @@ function App() {
 
       return () => clearInterval(interval);
     }
-  }, [token, filterCategory, filterStatus, searchTerm]);
+  }, [token, filterCategory, filterStatus, searchTerm, filterLocation]);
 
   const fetchLeads = async () => {
     try {
@@ -201,6 +202,7 @@ function App() {
       if (filterCategory) params.append('category', filterCategory);
       if (filterStatus) params.append('status', filterStatus);
       if (searchTerm) params.append('search', searchTerm);
+      if (filterLocation) params.append('location', filterLocation);
       
       const response = await fetch(`${BACKEND_URL}/api/leads?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -758,7 +760,17 @@ Sumit Ladwan
                 <div className="subtitle" style={{ textAlign: 'center', padding: '1rem 0' }}>No scrape jobs run yet.</div>
               ) : (
                 jobs.map((job) => (
-                  <div key={job._id} className="status-item">
+                  <div 
+                    key={job._id} 
+                    className="status-item"
+                    onClick={() => setFilterLocation(job.location)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      border: filterLocation === job.location ? '1px solid var(--primary-color)' : '1px solid transparent',
+                      backgroundColor: filterLocation === job.location ? 'rgba(37, 99, 235, 0.05)' : ''
+                    }}
+                    title="Click to filter leads by this location"
+                  >
                     <div className="status-item-info">
                       <strong style={{ fontSize: '0.825rem' }}>{job.category}</strong>
                       <span className="subtitle" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -794,7 +806,29 @@ Sumit Ladwan
         <div className="leads-container">
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <h2>Target Leads ({leads.length})</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <h2>Target Leads ({leads.length})</h2>
+                {filterLocation && (
+                  <span 
+                    onClick={() => setFilterLocation('')}
+                    style={{ 
+                      fontSize: '0.725rem', 
+                      backgroundColor: 'rgba(37, 99, 235, 0.1)', 
+                      color: 'var(--primary-color)', 
+                      padding: '0.25rem 0.5rem', 
+                      borderRadius: '12px', 
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      fontWeight: '500'
+                    }}
+                    title="Click to clear location filter"
+                  >
+                    📍 {filterLocation} <span style={{ fontWeight: 'bold', marginLeft: '2px' }}>×</span>
+                  </span>
+                )}
+              </div>
               <button 
                 className="btn btn-secondary" 
                 style={{ width: 'auto', gap: '0.5rem' }} 
